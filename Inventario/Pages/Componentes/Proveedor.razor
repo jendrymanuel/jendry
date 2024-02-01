@@ -1,0 +1,78 @@
+@page "/proveedor"
+
+
+
+@code
+{
+    public string TituloForm => proveedorRequest.Id == 0 ? 
+    "Agregar proveedor" : "Modificar proveedor";
+    
+    public string Filtro { get; set; } = "";
+    public bool ShowForm { get; set; } = false;
+    public List<ProveedorResponse> Proveedores { get; set; } = new();
+    public ProveedorRequest proveedorRequest { get; set; } = new();
+
+    async Task CargarProveedores()
+    {
+        var resultado =
+        await proveedorServices.Consultar(Filtro);
+        if (resultado.Exitoso)
+        {
+            Proveedores = resultado.Datos!;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarProveedores();
+    }
+
+    void Cancelar()
+    {
+        proveedorRequest  = new ProveedorRequest();
+        ShowForm = false;
+    }
+    public async Task Send()
+    {
+        if(proveedorRequest.Id == 0)
+        {
+            //Debo registrar el contacto..
+            var r = await proveedorServices.Crear(proveedorRequest);
+            if (r.Exitoso)
+            {
+                Cancelar();
+                await CargarProveedores();
+                StateHasChanged();
+            }
+        }
+        else
+        {
+            //Debo solicitar modificar el contacto...
+            var r = await proveedorServices.Modificar(proveedorRequest);
+            if (r.Exitoso)
+            {
+                Cancelar();
+                await CargarProveedores();
+                StateHasChanged();
+            }
+        }
+    }
+
+    public void Seleccionar(int Id)
+    {
+        ShowForm = true;
+        proveedorRequest = Proveedores
+        .Where(c => c.Id == Id)
+        .Select(c => c.ToRequest())
+        .FirstOrDefault() ?? new ProveedorRequest();
+    }
+    public async Task Eliminar(ProveedorResponse item)
+    {
+        var resultado = await proveedorServices.Eliminar(item.ToRequest());
+        if (resultado.Exitoso)
+        {
+            await CargarProveedores();
+            StateHasChanged();
+        }
+    }
+}

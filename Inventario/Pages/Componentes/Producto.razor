@@ -1,0 +1,96 @@
+@page "/producto"
+
+
+
+
+@code
+{
+    public string TituloForm => productoRequest.Id == 0 ? 
+    "Agregar producto" : "Modificar producto";
+    
+    public string Filtro { get; set; } = "";
+    public bool ShowForm { get; set; } = false;
+    public List<ProductoResponse> Productos { get; set; } = new();
+    public List<ProveedorResponse> Proveedores { get; set; } = new();
+    public ProductoRequest productoRequest { get; set; } = new();
+
+    void GoIndex()
+    {
+        urlHelper.NavigateTo("/");
+    }
+
+    async Task CargarProductos()
+    {
+        var resultado =
+        await productoServices.Consultar(Filtro);
+        if (resultado.Exitoso)
+        {
+            Productos = resultado.Datos!;
+        }
+    }
+    async Task CargarProveedores()
+    {
+        var resultado =
+        await proveedorServices.Consultar(Filtro);
+        if (resultado.Exitoso)
+        {
+            Proveedores = resultado.Datos!;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarProductos();
+        await CargarProveedores();
+    }
+
+    void Cancelar()
+    {
+        productoRequest  = new ProductoRequest();
+        ShowForm = false;
+    }
+    public async Task Send()
+    {
+        if (productoRequest.Id == 0)
+        {
+            var r = await productoServices.Crear(productoRequest);
+            if (r.Exitoso)
+            {
+                Cancelar();
+                await CargarProductos();
+                StateHasChanged();
+            }
+        }
+        else
+        {
+            // Debo solicitar modificar el producto.
+            var r = await productoServices.Modificar(productoRequest);
+            if (r.Exitoso)
+            {
+                Cancelar();
+                await CargarProductos();
+                StateHasChanged();
+            }
+        }
+    }
+
+
+    public void Seleccionar(int Id)
+    {
+        ShowForm = true;
+        productoRequest = Productos
+        .Where(c => c.Id == Id)
+        .Select(c => c.ToRequest())
+        .FirstOrDefault() ?? new ProductoRequest();
+    }
+    public async Task Eliminar(ProductoResponse item)
+    {
+        var resultado = await productoServices.Eliminar(item.ToRequest());
+        if (resultado.Exitoso)
+        {
+            await CargarProductos();
+            StateHasChanged();
+        }
+    }
+
+}
